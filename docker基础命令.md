@@ -1,5 +1,10 @@
 # Docker手册
 
+容器的主要目标是交付软件。新成立的开放容器项目给出以下定义：
+> 标准容器的目标是使用自描述和可移植的格式，封装软件组件及其全部依赖，以便任何兼容运行时都可以运行，无需额外的依赖，不必关心底层机器和容器的内容。
+
+这份定义没有提及任何关于软件分发类型的描述。这是有意而为之的，因为容器的设计是内容无关的。我们要交付什么以及如何使用完全取决于我们自己。
+
 ## 容器化和Docker简介
 
 > 容器化意味着封装或打包软件代码及其所有依赖项，以便它可以在任何基础架构上统一且一致地运行。
@@ -278,25 +283,211 @@ Docker 守护程序的默认行为是在 hub 中查找本地不存在的镜像�
 
 ### 列表展示容器
 
-`container ls`命令可用于列出当前正在运行的容器。
+`container ls`命令可用于列出当前正在运行的容器。执行以下命令：
 
 ![avatar][img5]
 
+一个名为`sad_torvalds`的容器正在运行。它是5分钟之前创建的，状态为`Up 5 minutes`，这表明自创建以来，该容器一直运行良好。
+
+`CONTAINER ID`为`02a8830a746b`，这是完整容器ID的 **前12** 个字符。完整容器ID为`02a8830a746b1311eb874dd8436d0b0e0647690982359a383476411a20de394c`，该字符长度为64。
+
+列表的`PORTS`列下，本地网络的端口80指向容器内的端口80。name`sad_torvalds`是由Docker生成的，可能与你的不同。
+
+`container ls`命令仅列出系统上当前正在运行的容器。为了列出过去运行的所有容器，可以使用`--all`或`-a`选项。
+
 ### 命名或重命名一个容器
+
+默认情况下，每个容器都有两个标识符。 如下：
+
+- `CONTAINER ID` : 64个字符的随机字符串。
+
+- `NAME`：两个随机词的组合，下划线连接。
+
+基于这两个随机标识符来引用容器非常不方便。我们使用自定义的名称来引用容器。
+
+使用`--name`选项来命名容器。要使用名为`hello-dock-container`的`docker.io/chancew/practice:v1`镜像运行另一个容器，可以执行以下命令：
+
+`docker container run --detach --publish 8081:80 --name hello-dock-container docker.io/chancew/practice:v1`
+
+本地网络上的`80`端口被名为`sad_torvalds`的容器占用了，这就是为什么必须使用其他端口号的原因。
+
+甚至可以用`container rename`命令来重命名旧容器。该命令语法如下：
+
+`docker container rename <container identifier> <new name>`
+
+`rename`命令适用于处于运行/停止状态的所有容器。
 
 ### 停止或kill运行中的容器
 
+可以通过简单地关闭终端窗口或单击`ctrl + c`来停止在前台运行的容器。但是，不能以相同方式停止在后台运行的容器。
+
+有两个命令可以完成此任务。 第一个是`container stop`:
+
+`docker container stop <docker identifier>`
+
+其中，<docker identifier>可以是容器的ID或名称。
+
+`stop`命令通过发送`SIGTERM`信号来正常关闭容器，。如果容器在一定时间内没有停止运行，则会发出`SIGKILL`信号，该信号会立即关闭容器。
+
+如果要发送`SIGKILL`信号而不是`SIGTERM`信号，则可以改用`container kill`命令。`container kill`命令遵循与`stop`命令相同的语法。
+
 ### 重新启动容器
+
+如下两种情况：
+
+- 重新启动先前已停止或终止的容器。
+
+- 重新启动正在运行的容器。
+
+停止的容器保留在系统中，如有需要可以重新启动它们。`container start`命令可用于启动任何已经停止或终止的容器。该命令的语法如下：
+
+`docker container start <container identifier>`
+
+可通过执行`docker container ls --all`命令来获取所有容器的列表，然后寻找状态为`Exited`的容器。
+
+默认情况下，`container start`命令以分离模式启动容器，并保留之前进行的端口配置。
+
+现在想重新启动正在运行的容器，可以使用`container restart`命令，该命令遵循与`container start`命令完全相同的语法。
+
+这两个命令之间的主要区别在于，`container restart`命令尝试停止目标容器，然后再次启动它，而`start`命令只是启动一个已经停止的容器。
+
+在容器停止的情况下，两个命令完全相同，但是如果容器正在运行，则必须使用`restart`命令。
 
 ### 创建而不运行容器
 
+`container run`命令实际上是两个单独命令的组合，这两个命令如下：
+
+- `container create`命令从给定镜像创建一个容器。
+
+- `container start`命令将启动一个已经创建的容器。
+
+使用`create`命令创建的容器可以用`container ls --all`命令验证状态。创建成功之后，使用`start`命令即可启动容器。
+
 ### 移除挂起的容器
+
+已被停止或终止的容器仍保留在系统中。这些挂起的容器可能会占用空间或与较新的容器发生冲突。
+
+可以使用`container rm`命令删除停止的容器。 通用语法如下：
+
+`docker container rm <container identifier>`
+
+要找出哪些容器没有运行，使用`container ls --all`命令并查找状态为`Exited`的容器。
+
+使用`container ls --all`检查容器是否被删除。也可以一次删除多个容器，方法是将其标识符一个接一个地传递，每个标识符之间用空格隔开。
+
+也可以使用`container prune`命令来一次性删除所有挂起的容器。
+
+`container run`和`container start`命令还有`--rm`选项，它们表示希望容器在停止后立即被移除。
 
 ### 以交互模式运行容器
 
+到目前为止，只运行了hello-world镜像和docker.io/chancew/practice镜像。这些镜像用于执行非交互式的简单程序。
+
+镜像并不是那么简单，镜像可以将整个Linux发行版封装在其中。
+
+流行的发行版，例如 Ubuntu，CentOS，Fedora 和 Debian 都在 hub 有官方的 Docker 镜像。编程语言，例如 python、php、go或类似node和deno都有其官方镜像。
+
+这些镜像不但仅运行某些预配置的程序。还将它们配置为默认情况下运行的shell程序。在镜像是操作系统的情况下，它可以是诸如sh或bash之类的东西，在镜像是编程语言或运行时的情况下，通常是它们的默认语言的shell。
+
+shell是交互程序，被配置为运行此种程序的镜像是交互式镜像，这些镜像需要在`container run`命令中传递特殊的`-it`选项。
+
+例如，如果通过执行`docker container run centos`使用CentOS镜像运行一个容器，将不会发生任何事情，但是如果使用`-it`执行相同的命令，会直接进入CentOS容器内的bash上。
+
+```
+[root@chance ~]# docker container run --rm -it centos
+[root@5f3572523c59 /]# cat /etc/os-release 
+NAME="CentOS Linux"
+VERSION="8"
+ID="centos"
+ID_LIKE="rhel fedora"
+VERSION_ID="8"
+PLATFORM_ID="platform:el8"
+PRETTY_NAME="CentOS Linux 8"
+ANSI_COLOR="0;31"
+CPE_NAME="cpe:/o:centos:centos:8"
+HOME_URL="https://centos.org/"
+BUG_REPORT_URL="https://bugs.centos.org/"
+CENTOS_MANTISBT_PROJECT="CentOS-8"
+CENTOS_MANTISBT_PROJECT_VERSION="8"
+[root@5f3572523c59 /]# 
+```
+
+从`cat /etc/os-release`命令的输出中可以看到，我确实正在与CentOS容器中运行的bash进行交互。
+
+`-it`选项提供了与容器内的程序进行交互的场景，此选项实际上是将两个单独的选项混在一起：
+
+- 选项`-i`或`--interactive`连接到容器的输入流，以便将输入发送到容器内的bash。
+
+- 选项`-t`或`--tty`通过分配伪tty来格式化展示并提供类似本机终端的体验。
+
 ### 在容器中执行命令
 
+通用语法格式：
+
+`docker container run <image name> <command>`
+
+这里发生的是，在`container run`命令中，镜像名称后传递的任何内容都将传递到镜像的默认入口里。
+
+入口点就像是通往镜像的网关。除可执行镜像外的大多数镜像使用`shell`或`sh`作为默认入口点。因此，任何有效的 shell 命令都可以作为参数传递给它们。
+
 ### 处理可执行镜像
+
+可执行镜像旨在表现得像可执行程序。
+
+可执行镜像没有服务镜像那么常见，但却是一个非常有用的补充。可执行镜像要解决的是软件兼容性等问题。我们拿官方的Maven镜像作为例子，探索可执行镜像是什么、它们是如何工作的，以及我们如何创建可执行镜像。其中，Dockerfile中的ENTRYPOINT指令是演绎可执行镜像的核心角色。
+
+以rmbyext脚本为例，它能够递归删除给定扩展名的文件。如果同时安装了Git和Python，则可以通过执行以下命令来安装此脚本：
+
+`pip3 install git+https://github.com/WCJ-Chance/devops.git#egg=rmbyext`
+
+假设系统已经正确设置了Python3，则该脚本应该可以在终端的任何位置使用。使用此脚本的通用语法如下：
+
+`rmbyext <file extension>`
+
+要对其进行测试，请在一个空目录下打开终端，并在其中创建具有不同扩展名的一些文件。可以使用`touch`命令来做到这一点。现在，计算机上有一个包含这些文件的目录：
+
+```
+touch a.pdf b.pdf c.txt d.pdf e.txt
+
+ls
+
+# a.pdf  b.pdf  c.txt  d.pdf  e.txt
+```
+
+要从该目录删除所有`pdf`文件，可以执行以下命令：
+
+```
+rmbyext pdf
+
+# Removing: PDF
+# a.pdf
+# b.pdf
+# d.pdf
+```
+
+该程序的可执行镜像能够将文件扩展名用作参数，并像 rmbyext 程序一样删除它们。该镜像包含rmbyext脚本的副本，并配置为在容器内的目录/zone上运行该脚本。
+
+现在的问题是容器与本地系统隔离，因此在容器内运行的 rmbyext 程序无法访问本地文件系统。因此，如果可以通过某种方式将包含pdf文件的本地目录映射到容器内的/zone目录，则容器应该可以访问这些文件。
+
+授予容器直接访问本地文件系统的一种方法是使用 **绑定挂载**。
+
+绑定挂载可以在本地文件系统目录（源）与容器内另一个目录（目标）之间形成双向数据绑定。这样，在目标目录中进行的任何更改都将在源目录上生效，反之亦然。
+
+让我们看一下绑定挂载的实际应用。要使用此镜像而不是程序本身删除文件，可以执行以下命令:
+
+`docker container run --rm -v $(pwd):/zone docker.io/chancew/excutable:v2 pdf`
+
+已经在命令中看到了`-v $(pwd):/zone`部分，你可能已经猜到了`-v`或`--volume`选项用于为容器创建绑定挂载。该选项可以使用三个以冒号（:）分隔的字段。该选项的通用语法如下：
+
+`--volume <local file system directory absolute path>:<container file system directory absolute path>:<read write access>`
+
+第三个字段是可选的，但必须传递本地目录的绝对路径和容器内目录的绝对路径。
+
+`--volume`或`-v`选项对`container run`以及`container create`命令均有效。
+
+常规镜像和可执行镜像之间的区别在于，可执行镜像的入口点设置为自定义程序而不是`sh`，在本例中为`rmbyext`程序。正如在上一小节中所学到的那样，在`container run`命令中在镜像名称之后编写的所有内容都将传递到镜像的入口点。
+
+所以最后，`docker container run --rm -v $(pwd):/zone docker.io/chancew/excutable:v2 pdf`命令转换为容器内的`rmbyext pdf`。可执行镜像并不常见，但在某些情况下可能非常有用。
 
 ## Docker镜像操作基础知识
 
